@@ -5,10 +5,12 @@ public class Player
     public string id;
     public Conn conn;
 
+    public PlayerTempData tempData;
     public Player(string id, Conn conn)
     {
         this.id = id;
         this.conn = conn;
+        tempData = new PlayerTempData();
     }
 
     public void Send(ProtocolBase proto)
@@ -44,7 +46,7 @@ public class Player
 
     public bool Logout()
     {
-        //ServNet.instance.handlePlayerEvent.OnLogout(this);
+        ServNet.instance.handlePlayerEvent.OnLogout(this);
         conn.player = null;
         conn.Close();
         return true;

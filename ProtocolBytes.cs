@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Linq;
 
-class ProtocolBytes : ProtocolBase
+public class ProtocolBytes : ProtocolBase
 {
     public byte[] bytes;
 

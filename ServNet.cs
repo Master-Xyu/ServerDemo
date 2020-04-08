@@ -18,6 +18,10 @@ public class ServNet
     public long heartBeatTime = 180;
 
     public ProtocolBase proto;
+
+    public HandleConnMsg handleConnMsg = new HandleConnMsg();
+    public HandlePlayerMsg handlePlayerMsg = new HandlePlayerMsg();
+    public HandlePlayerEvent handlePlayerEvent = new HandlePlayerEvent();
     public ServNet()
     {
         instance = this;
@@ -51,7 +55,7 @@ public class ServNet
         conns = new Conn[maxConn];
         for (int i = 0; i < maxConn; i++)
         {
-            conns[o] = new Conn();
+            conns[i] = new Conn();
         }
 
         listenfd = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -81,7 +85,7 @@ public class ServNet
             else
             {
                 Conn conn = conns[index];
-                conn.Init(socket);
+                conn.init(socket);
                 string adr = conn.GetAdress();
                 Console.WriteLine("客户端连接【" + adr + "】 conn 池ID:" + index);
                 conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, ReceiveCb, conn);
@@ -122,10 +126,11 @@ public class ServNet
                 conn.buffCount += count;
                 ProcessData(conn);
 
-                conn.socket.BeginReceive();
+                conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, ReceiveCb, conn);
             }catch(Exception e)
             {
-
+                Console.WriteLine("收到【" + conn.GetAdress() + "】断开连接");
+                conn.Close();
             }
         }
     }
@@ -177,7 +182,7 @@ public class ServNet
 
     public void HeartBeat()
     {
-        Console.WriteLine("【主定时器执行】");
+        //Console.WriteLine("【主定时器执行】");
         long timeNow = Sys.GetTimeStamp();
 
         for(int i = 0; i < conns.Length; i++)
@@ -200,13 +205,34 @@ public class ServNet
         string name = protoBase.GetName();
         Console.WriteLine("【收到协议】" + name);
 
-        if(name == "HeartBeat")
-        {
-            Console.WriteLine("【更新心跳时间】" + conn.GetAdress());
-            conn.lastTickTime = Sys.GetTimeStamp();
-        }
+        string methodName = "Msg" + name;
 
-        Send(conn, protoBase);
+        if(conn.player == null || name == "HeartBeat" || name == "Logout")
+        {
+            MethodInfo mm = handleConnMsg.GetType().GetMethod(methodName);
+            if(mm == null)
+            {
+                string str = "【警告】HandleMsg没有处理连接方法";
+                Console.WriteLine(str + methodName);
+                return;
+            }
+            Object[] obj = new object[] { conn, protoBase };
+            Console.WriteLine("【处理连接消息】" + conn.GetAdress() + " :" + name);
+            mm.Invoke(handleConnMsg, obj);
+        }
+        else
+        {
+            MethodInfo mm = handlePlayerMsg.GetType().GetMethod(methodName);
+            if (mm == null)
+            {
+                string str = "【警告】HandleMsg没有处理玩家方法";
+                Console.WriteLine(str + methodName);
+                return;
+            }
+            Object[] obj = new object[] { conn.player, protoBase };
+            Console.WriteLine("【处理玩家消息】" + conn.GetAdress() + " :" + name);
+            mm.Invoke(handlePlayerMsg, obj);
+        }
     }
 
     public void Broadcast(ProtocolBase protocol)
@@ -218,6 +244,22 @@ public class ServNet
             if (conns[i].player == null)
                 continue;
             Send(conns[i], protocol);
+        }
+    }
+
+    public void Print()
+    {
+        Console.WriteLine("===服务器登录信息===");
+        for(int i = 0; i < conns.Length; i++)
+        {
+            if (conns[i] == null)
+                continue;
+            if (!conns[i].isUse)
+                continue;
+            string str = "连接【" + conns[i].GetAdress() + "]";
+            if (conns[i].player != null)
+                str += "玩家id" + conns[i].player.id;
+            Console.WriteLine(str);
         }
     }
 }

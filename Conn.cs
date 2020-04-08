@@ -33,7 +33,7 @@ public class Conn
         isUse = true;
         buffCount = 0;
 
-        lastTickTime = Sys.GetTiimeStamp();
+        lastTickTime = Sys.GetTimeStamp();
     }
 
     public int BuffRemain()
@@ -56,7 +56,7 @@ public class Conn
             return;
         if (player != null)
         {
-            //player.Logout();
+            player.Logout();
             return;
         }
         Console.WriteLine("【断开连接】" + GetAdress());
@@ -64,10 +64,10 @@ public class Conn
         socket.Close();
         isUse = false;
     }
-    /*
-    public void Send(ProtocalBase protocol)
+
+    public void Send(ProtocolBase protocol)
     {
         ServNet.instance.Send(this, protocol);
     }
-    */
+
 }
